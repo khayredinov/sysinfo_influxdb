@@ -37,6 +37,7 @@ var hostFlag string
 var usernameFlag string
 var passwordFlag string
 var databaseFlag string
+var hostname string
 
 func init() {
 	flag.BoolVar(&versionFlag, "version", false, "Print the version number and exit.")
@@ -45,7 +46,7 @@ func init() {
 	flag.StringVar(&verboseFlag, "verbose", "", "Display debug information: choose between text or JSON.")
 	flag.StringVar(&verboseFlag, "v", "", "Display debug information: choose between text or JSON (shorthand).")
 
-	hostname, _ := os.Hostname();
+	hostname, _ = os.Hostname();
 	flag.StringVar(&prefixFlag, "prefix", hostname, "Change series name prefix.")
 	flag.StringVar(&prefixFlag, "P", hostname, "Change series name prefix (shorthand).")
 
@@ -206,6 +207,15 @@ func send(client *influxClient.Client, series []*influxClient.Series) error {
 
 var last_series = make(map[string] [][]interface{})
 
+func AddHost(serie *influxClient.Series) *influxClient.Series {
+	serie.Columns = append(serie.Columns, "host");
+	
+	for i := 0; i < len(serie.Points) ; i++ {
+		serie.Points[i] = append(serie.Points[i], hostname);
+	}
+	return serie
+}
+
 func DiffFromLast(serie *influxClient.Series) *influxClient.Series {
 	notComplete := false
 
@@ -287,7 +297,7 @@ func cpus(prefix string, ch chan *influxClient.Series) error {
 		serie.Points = append(serie.Points, []interface{}{fmt.Sprint("cpu", i), cpu.User, cpu.Nice, cpu.Sys, cpu.Idle, cpu.Wait, cpu.Total()})
 	}
 
-	ch <- DiffFromLast(serie)
+	ch <- DiffFromLast(AddHost(serie))
 	return nil;
 }
 
@@ -305,7 +315,7 @@ func mem(prefix string, ch chan *influxClient.Series) error {
 	}
 	serie.Points = append(serie.Points, []interface{}{mem.Free, mem.Used, mem.ActualFree, mem.ActualUsed, mem.Total})
 
-	ch <- serie
+	ch <- AddHost(serie)
 	return nil
 }
 
@@ -323,7 +333,7 @@ func swap(prefix string, ch chan *influxClient.Series) error {
 	}
 	serie.Points = append(serie.Points, []interface{}{swap.Free, swap.Used, swap.Total})
 
-	ch <- serie
+	ch <- AddHost(serie)
 	return nil
 }
 
@@ -341,7 +351,7 @@ func uptime(prefix string, ch chan *influxClient.Series) error {
 	}
 	serie.Points = append(serie.Points, []interface{}{uptime.Length})
 
-	ch <- serie
+	ch <- AddHost(serie)
 	return nil
 }
 
@@ -359,7 +369,7 @@ func load(prefix string, ch chan *influxClient.Series) error {
 	}
 	serie.Points = append(serie.Points, []interface{}{load.One, load.Five, load.Fifteen})
 
-	ch <- serie
+	ch <- AddHost(serie)
 	return nil
 }
 
@@ -416,7 +426,7 @@ func network(prefix string, ch chan *influxClient.Series) error {
 		serie.Points = append(serie.Points, points)
 	}
 
-	ch <- DiffFromLast(serie)
+	ch <- DiffFromLast(AddHost(serie))
 	return nil
 }
 
@@ -459,6 +469,6 @@ func disks(prefix string, ch chan *influxClient.Series) error {
 		serie.Points = append(serie.Points, points)
 	}
 
-	ch <- DiffFromLast(serie)
+	ch <- DiffFromLast(AddHost(serie))
 	return nil
 }
