@@ -164,7 +164,11 @@ func main() {
 			// Send data
 			if client != nil && !first {
 				if err := send(client, data); err != nil {
-					panic(err)
+					if daemonFlag {
+						fmt.Printf("error:", err)
+					} else {
+						panic(err)
+					}
 				}
 			}
 
