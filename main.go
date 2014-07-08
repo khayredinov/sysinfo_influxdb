@@ -86,8 +86,12 @@ func main() {
 
 			var err error
 			client, err = influxClient.NewClient(config)
-
+			
 			if err != nil {
+				panic(err)
+			}
+			
+			if err := createDatabase(client); err != nil {
 				panic(err)
 			}
 		}
@@ -198,6 +202,23 @@ func prettyPrinter(series []*influxClient.Series) {
 
 func send(client *influxClient.Client, series []*influxClient.Series) error {
 	return client.WriteSeries(series)
+}
+
+func createDatabase(client *influxClient.Client) error {
+	list, _ := client.GetDatabaseList()
+	exists := false
+	for i := 0; i < len(list); i++ {
+		if list[i]["name"] == databaseFlag {
+			exists = true
+			break
+		}
+	}
+	
+	if !exists {
+		return client.CreateDatabase(databaseFlag)
+	}
+	
+	return nil
 }
 
 
